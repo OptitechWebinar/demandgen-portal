@@ -9,6 +9,11 @@ import { ReportsPage } from './pages/client/ReportsPage'
 import { ClientsListPage } from './pages/admin/ClientsListPage'
 import { ClientDetailPage } from './pages/admin/ClientDetailPage'
 import { RollupPage } from './pages/admin/RollupPage'
+import { IcpBuilderPage } from './pages/admin/IcpBuilderPage'
+import { ProspectingPage } from './pages/admin/ProspectingPage'
+import { SequencesListPage } from './pages/admin/SequencesListPage'
+import { SequenceEditorPage } from './pages/admin/SequenceEditorPage'
+import { CampaignBuildPage } from './pages/admin/CampaignBuildPage'
 
 function HomeRedirect() {
   const { profile } = useAuth()
@@ -79,6 +84,56 @@ function App() {
             <ProtectedRoute requireRole="admin">
               <Layout>
                 <RollupPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/clients/:id/icp"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Layout>
+                <IcpBuilderPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/clients/:id/prospecting"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Layout>
+                <ProspectingPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sequences"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Layout>
+                <SequencesListPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sequences/:id"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Layout>
+                <SequenceEditorPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/campaigns/:id"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Layout>
+                <CampaignBuildPage />
               </Layout>
             </ProtectedRoute>
           }

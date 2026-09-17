@@ -9,52 +9,17 @@
 //   - The admin UI calls this via supabase.functions.invoke('lemlist-sync',
 //     { body: { client_id } }) with the signed-in admin's session, forwarded
 //     automatically as the Authorization header: syncs just that client.
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { CORS_HEADERS, getClientLemlistKey, json, requireAdmin } from '../_shared/adminAuth.ts'
 import { getCampaignStatsForDay, listCampaigns, mapLemlistStatus } from '../_shared/lemlist.ts'
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-  })
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS })
   }
 
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-
-  const isServiceRoleCaller = authHeader === `Bearer ${SERVICE_ROLE_KEY}`
-  if (!isServiceRoleCaller) {
-    const callerClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: userData, error: userError } = await callerClient.auth.getUser()
-    if (userError || !userData.user) {
-      return json({ error: 'Missing or invalid session' }, 401)
-    }
-
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', userData.user.id)
-      .maybeSingle()
-
-    if (profile?.role !== 'admin') {
-      return json({ error: 'Admins only' }, 403)
-    }
-  }
+  const auth = await requireAdmin(req)
+  if ('error' in auth) return auth.error
+  const { admin } = auth
 
   const body = await req.json().catch(() => ({}) as { client_id?: string })
   const targetClientId = body.client_id
@@ -79,18 +44,7 @@ Deno.serve(async (req) => {
 
   for (const client of clients ?? []) {
     try {
-      const { data: secretRow, error: secretError } = await admin
-        .schema('vault')
-        .from('decrypted_secrets')
-        .select('decrypted_secret')
-        .eq('id', client.lemlist_api_key_secret_id as string)
-        .maybeSingle()
-
-      if (secretError || !secretRow?.decrypted_secret) {
-        errors.push(`client ${client.id}: no Lemlist key found`)
-        continue
-      }
-      const apiKey = secretRow.decrypted_secret as string
+      const apiKey = await getClientLemlistKey(admin, client.lemlist_api_key_secret_id as string | null)
 
       const lemlistCampaigns = await listCampaigns(apiKey)
 

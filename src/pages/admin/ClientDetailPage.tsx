@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   fetchAllCampaigns,
   fetchClient,
@@ -8,6 +8,7 @@ import {
   triggerSync,
   updateClient,
 } from '../../lib/adminData'
+import { createDraftCampaign } from '../../lib/campaignWorkflow'
 import type { Campaign, Client, ClientStatus, ProvisioningStatus } from '../../types/database'
 import { ProvisioningTracker } from '../../components/ProvisioningTracker'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -23,6 +24,7 @@ const PROVISIONING_STATUSES: ProvisioningStatus[] = [
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [client, setClient] = useState<Client | null>(null)
   const [allClients, setAllClients] = useState<Client[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -30,6 +32,7 @@ export function ClientDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [creatingCampaign, setCreatingCampaign] = useState(false)
   const [apiKeyInput, setApiKeyInput] = useState('')
 
   async function load(clientId: string) {
@@ -128,6 +131,18 @@ export function ClientDetailPage() {
     }
   }
 
+  async function handleNewCampaign() {
+    if (!client) return
+    setCreatingCampaign(true)
+    try {
+      const campaign = await createDraftCampaign({ client_id: client.id, name: `${client.name} — new campaign` })
+      navigate(`/admin/campaigns/${campaign.id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create campaign')
+      setCreatingCampaign(false)
+    }
+  }
+
   if (loading) return <p className="text-sm text-slate-500">Loading client…</p>
   if (error && !client) return <p className="text-sm text-red-600">{error}</p>
   if (!client) return <p className="text-sm text-slate-500">Client not found.</p>
@@ -154,14 +169,28 @@ export function ClientDetailPage() {
               ))}
             </select>
           </div>
-          <button
-            type="button"
-            onClick={handleSync}
-            disabled={syncing}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
-            {syncing ? 'Syncing…' : 'Sync now'}
-          </button>
+          <div className="flex gap-2">
+            <Link
+              to={`/admin/clients/${client.id}/icp`}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              ICP profiles
+            </Link>
+            <Link
+              to={`/admin/clients/${client.id}/prospecting`}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Prospecting
+            </Link>
+            <button
+              type="button"
+              onClick={handleSync}
+              disabled={syncing}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -235,14 +264,24 @@ export function ClientDetailPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-700">Campaigns</h2>
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h2 className="text-sm font-medium text-slate-700">Campaigns</h2>
+          <button
+            type="button"
+            onClick={handleNewCampaign}
+            disabled={creatingCampaign}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+          >
+            {creatingCampaign ? 'Creating…' : 'New campaign'}
+          </button>
+        </div>
         <ul className="divide-y divide-slate-100">
           {campaigns.map((campaign) => (
-            <li key={campaign.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">{campaign.name}</p>
+            <li key={campaign.id} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
+              <Link to={`/admin/campaigns/${campaign.id}`} className="flex-1">
+                <p className="text-sm font-medium text-indigo-600">{campaign.name}</p>
                 <p className="text-xs text-slate-400">{campaign.vertical ?? 'No vertical'}</p>
-              </div>
+              </Link>
               <div className="flex items-center gap-3">
                 <StatusBadge status={campaign.status} />
                 <select
@@ -267,9 +306,7 @@ export function ClientDetailPage() {
             </li>
           ))}
           {campaigns.length === 0 && (
-            <li className="px-4 py-6 text-center text-sm text-slate-400">
-              No campaigns synced for this client yet.
-            </li>
+            <li className="px-4 py-6 text-center text-sm text-slate-400">No campaigns yet.</li>
           )}
         </ul>
       </section>

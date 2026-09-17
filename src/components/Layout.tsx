@@ -32,6 +32,7 @@ export function Layout({ children }: { children: ReactNode }) {
               {isAdmin ? (
                 <>
                   <NavItem to="/admin">Clients</NavItem>
+                  <NavItem to="/admin/sequences">Sequences</NavItem>
                   <NavItem to="/admin/rollup">Rollup</NavItem>
                 </>
               ) : (

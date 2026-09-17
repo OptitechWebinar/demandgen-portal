@@ -52,11 +52,130 @@ export type Profile = {
 export type Campaign = {
   id: string
   client_id: string
-  lemlist_campaign_id: string
+  // Null until the campaign is launched into Lemlist.
+  lemlist_campaign_id: string | null
   name: string
   vertical: string | null
   status: CampaignStatus
+  sequence_id: string | null
+  icp_profile_id: string | null
+  launched_at: string | null
+  launch_error: string | null
   created_at: string
+}
+
+export type CampaignWrite = {
+  client_id: string
+  name: string
+  vertical?: string | null
+  sequence_id?: string | null
+  icp_profile_id?: string | null
+}
+
+export type IcpCriteria = {
+  industries?: string[]
+  companySizeMin?: number
+  companySizeMax?: number
+  titles?: string[]
+  seniority?: string[]
+  geographies?: string[]
+  signals?: string[]
+}
+
+export type IcpProfile = {
+  id: string
+  client_id: string
+  name: string
+  criteria: IcpCriteria
+  created_at: string
+  updated_at: string
+}
+
+export type IcpProfileWrite = {
+  client_id: string
+  name: string
+  criteria: IcpCriteria
+}
+
+export type SequenceChannel = 'email' | 'linkedin' | 'sms' | 'whatsapp'
+
+export type Sequence = {
+  id: string
+  // Null = a reusable global template. Set = a campaign-owned copy, cloned
+  // from a template before launch so later template edits don't
+  // retroactively change already-built campaigns.
+  client_id: string | null
+  name: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SequenceWrite = {
+  client_id?: string | null
+  name: string
+  description?: string | null
+}
+
+export type SequenceStep = {
+  id: string
+  sequence_id: string
+  step_order: number
+  channel: SequenceChannel
+  delay_days: number
+  subject: string | null
+  body: string
+  created_at: string
+}
+
+export type SequenceStepWrite = {
+  sequence_id: string
+  step_order: number
+  channel: SequenceChannel
+  delay_days: number
+  subject?: string | null
+  body: string
+}
+
+export type ProspectSource = 'uplead' | 'csv_import'
+export type ProspectStatus = 'staged' | 'attached' | 'rejected'
+
+export type Prospect = {
+  id: string
+  client_id: string
+  icp_profile_id: string | null
+  campaign_id: string | null
+  source: ProspectSource
+  external_id: string | null
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  title: string | null
+  company_name: string | null
+  company_domain: string | null
+  linkedin_url: string | null
+  location: string | null
+  raw: Record<string, unknown>
+  status: ProspectStatus
+  created_at: string
+}
+
+export type ProspectWrite = {
+  client_id: string
+  icp_profile_id?: string | null
+  campaign_id?: string | null
+  source: ProspectSource
+  external_id?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  title?: string | null
+  company_name?: string | null
+  company_domain?: string | null
+  linkedin_url?: string | null
+  location?: string | null
+  raw?: Record<string, unknown>
+  status?: ProspectStatus
 }
 
 export type CampaignStatsDaily = {
@@ -99,11 +218,7 @@ export type Database = {
       }
       campaigns: {
         Row: Campaign
-        Insert: Partial<Campaign> & {
-          client_id: string
-          lemlist_campaign_id: string
-          name: string
-        }
+        Insert: CampaignWrite
         Update: Partial<Campaign>
         Relationships: []
       }
@@ -122,6 +237,30 @@ export type Database = {
           summary_text: string
         }
         Update: Partial<Report>
+        Relationships: []
+      }
+      icp_profiles: {
+        Row: IcpProfile
+        Insert: IcpProfileWrite
+        Update: Partial<IcpProfileWrite>
+        Relationships: []
+      }
+      sequences: {
+        Row: Sequence
+        Insert: SequenceWrite
+        Update: Partial<SequenceWrite>
+        Relationships: []
+      }
+      sequence_steps: {
+        Row: SequenceStep
+        Insert: SequenceStepWrite
+        Update: Partial<SequenceStepWrite>
+        Relationships: []
+      }
+      prospects: {
+        Row: Prospect
+        Insert: ProspectWrite
+        Update: Partial<ProspectWrite>
         Relationships: []
       }
     }
