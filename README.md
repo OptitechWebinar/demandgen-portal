@@ -92,9 +92,14 @@ Database → Extensions → supabase_vault**.
 
 ### 3. Create the first admin user
 
-Sign up once through the app's login screen (or Supabase Dashboard → Auth →
-Add user) — this auto-creates a matching `profiles` row via the
-`handle_new_user` trigger with `role = 'client_user'`. Promote it to admin:
+Email/password only — there's no self-serve signup and no magic link.
+Every user (admin or client) is created by an admin directly in
+**Supabase Dashboard → Authentication → Users → Add user**, setting a
+password there (this is a dashboard action, not an email send, so it's
+never affected by Supabase's auth-email rate limit). Share that password
+with the person out of band. This auto-creates a matching `profiles` row
+via the `handle_new_user` trigger with `role = 'client_user'`. Promote it
+to admin:
 
 ```sql
 update public.profiles set role = 'admin' where email = 'joe@optitech.example';
